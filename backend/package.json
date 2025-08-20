@@ -9,7 +9,11 @@
     "dev": "nodemon index.js",
     "db:migrate": "npx prisma migrate dev && npm run db:seed",
     "db:seed": "node prisma/seed.js",
-    "db:reset": "npx prisma db push --force-reset"
+    "db:reset": "npx prisma db push --force-reset",
+    "pm2:start": "NODE_ENV=production NODE_OPTIONS='--max-old-space-size=1024 --no-warnings' pm2 start index.js -i 1 --name zapx-backend",
+    "pm2:reload": "NODE_ENV=production NODE_OPTIONS='--max-old-space-size=1024 --no-warnings' pm2 reload zapx-backend",
+    "pm2:reload-no-build": "NODE_ENV=production NODE_OPTIONS='--max-old-space-size=1024 --no-warnings' pm2 reload zapx-backend",
+    "pm2:stop": "pm2 stop zapx-backend"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",

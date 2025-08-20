@@ -238,6 +238,10 @@ const signup = async (req, res) => {
 
 const login = async (req, res) => {
   try {
+    console.log('🔐 Login attempt started');
+    console.log('📧 Email:', req.body.email);
+    console.log('🔑 TOKEN_SECRET exists:', !!process.env.TOKEN_SECRET);
+    
     const { email, password } = req.body;
 
     const user = await db.user.findFirst({
@@ -248,33 +252,49 @@ const login = async (req, res) => {
     });
 
     if (!user) {
+      console.log('❌ User not found for email:', email);
       return res.status(400).json({ message: 'Invalid email or password!' });
     }
+
+    console.log('✅ User found:', user.id);
 
     const validPassword = await verifyPassword({
       commingPassword: password,
       usersPassword: user.password,
     });
 
-    if (!validPassword)
+    if (!validPassword) {
+      console.log('❌ Invalid password for user:', user.id);
       return res.status(400).json({
         message: 'Invalid email or password!',
       });
+    }
 
-    const token = assignToken({ id: user.id });
-    const response = {
-      token,
-      User: {
-        id: user.id,
-        role: user.role,
-        email: user.email,
-      },
-    };
+    console.log('✅ Password valid, generating token...');
+    
+    try {
+      const token = assignToken({ id: user.id });
+      console.log('✅ Token generated successfully');
+      
+      const response = {
+        token,
+        User: {
+          id: user.id,
+          role: user.role,
+          email: user.email,
+        },
+      };
 
-    return res
-      .status(200)
-      .json({ message: 'You have logged in successfully', response });
+      console.log('🎉 Login successful for user:', user.id);
+      return res
+        .status(200)
+        .json({ message: 'You have logged in successfully', response });
+    } catch (tokenError) {
+      console.log('❌ Token generation failed:', tokenError.message);
+      return res.status(500).json({ message: 'Failed to generate authentication token' });
+    }
   } catch (err) {
+    console.log('❌ Login error:', err.message);
     res.status(500).json({ message: err.message });
   }
 };
