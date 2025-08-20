@@ -1,0 +1,408 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SELLER
+  CONSUMER
+}
+
+enum BookingStatus {
+  INPROGRESS
+  PENDING
+  CONFIRMED
+  OFFER
+  CANCELED
+  DECLINED
+  AWAITING_BOOKING_CONFIRMATION
+}
+
+enum NotificationType {
+  BOOKING_CREATED
+  BOOKING_PENDING
+  BOOKING_CONFIRMED
+  BOOKING_OFFER
+  BOOKING_CANCELED
+  OFFER_DECLINED
+  MESSAGE_CREATED
+}
+
+enum CallStatus {
+  MISSED
+  PICKED
+  REJECTED
+}
+
+enum CallType {
+  VEDIO
+  AUDIO
+}
+
+model User {
+  id               Int                 @id @default(autoincrement())
+  username         String?
+  fullName         String?
+  email            String
+  role             Role
+  password         String?
+  isVerified       Boolean?
+  otp              PasswordResetToken?
+  Seller           Seller?
+  Consumer         Consumer?
+  ProfileImage     File?               @relation(fields: [fileId], references: [id])
+  fileId           Int?                @unique
+  Chat             Chat[]
+  Message          Message[]           @relation("messages")
+  SeenMessages     Message[]           @relation("UserMessage")
+  NotificationSeen Notification?       @relation(name: "seenByUser")
+  Notification     Notification[]      @relation("users")
+  CallsMade        Call[]              @relation("Caller")
+  CallsReceived    Call[]              @relation("Recipient")
+  deleted          Boolean             @default(false)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+}
+
+model Notification {
+  id          Int              @id @default(autoincrement())
+  description String
+  type        NotificationType
+  SeenBy      User?            @relation(name: "seenByUser", fields: [userId], references: [id])
+  userId      Int?             @unique
+  Users       User[]           @relation("users")
+  Booking     Booking?         @relation(fields: [bookingId], references: [id])
+  bookingId   Int?
+  Chat        Chat?            @relation(fields: [chatId], references: [id])
+  chatId      Int?
+  deleted     Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  deleted   Boolean  @default(false)
+  expiresAt DateTime
+  token     String
+  User      User     @relation(fields: [userId], references: [id])
+  userId    Int      @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model File {
+  id                    Int        @id @default(autoincrement())
+  url                   String
+  mimeType              String
+  SellerImage           Seller?    @relation(name: "sellerImage", fields: [sellerImageId], references: [id])
+  sellerImageId         Int?       @unique
+  SellerCardImage       Seller?    @relation(name: "cardImage", fields: [sellerCardImageId], references: [id])
+  sellerCardImageId     Int?       @unique
+  Post                  Post?      @relation(fields: [postId], references: [id])
+  postId                Int?
+  Portfolio             Portfolio? @relation(fields: [portfolioId], references: [id])
+  portfolioId           Int?
+  ExampleBookingImage   Booking?   @relation(name: "exampleImage", fields: [exampleBookingImageId], references: [id])
+  exampleBookingImageId Int?
+  DeliverBookingImage   Booking?   @relation(name: "deliverBookingImage", fields: [deliverBookingImageId], references: [id])
+  deliverBookingImageId Int?
+  User                  User?
+  deleted               Boolean    @default(false)
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+  Message               Message?   @relation(fields: [messageId], references: [id]) // Relation to Message
+  messageId             Int?
+}
+
+model Category {
+  id        Int         @id @default(autoincrement())
+  name      String
+  Services  Services[]
+  Seller    Seller[]
+  Scheduler Scheduler[]
+  deleted   Boolean     @default(false)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model Services {
+  id          Int        @id @default(autoincrement())
+  name        String
+  Category    Category?  @relation(fields: [categoryId], references: [id])
+  categoryId  Int?
+  Seller      Seller?    @relation(fields: [sellerId], references: [id])
+  sellerId    Int?
+  Scheduler   Scheduler? @relation(fields: [schedulerId], references: [id])
+  schedulerId Int?
+  deleted     Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Seller {
+  id         Int         @id @default(autoincrement())
+  aboutMe    String?
+  location   String?
+  Services   Services[]
+  Image      File?       @relation(name: "sellerImage")
+  CardImage  File?       @relation(name: "cardImage")
+  User       User        @relation(fields: [userId], references: [id])
+  userId     Int         @unique
+  Category   Category    @relation(fields: [categoryId], references: [id])
+  categoryId Int
+  Post       Post[]
+  Portfolio  Portfolio[]
+  Booking    Booking[]
+  Discount   Discount?
+  Review     Review[]
+  Favourite  Favourite[]
+  deleted    Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  BankDetail BankDetail?
+  Scheduler  Scheduler?
+}
+
+model Consumer {
+  id               Int          @id @default(autoincrement())
+  phone            String?
+  stripeCustomerId String?
+  CardDetail       CardDetail[]
+  Booking          Booking[]
+  User             User         @relation(fields: [userId], references: [id])
+  userId           Int          @unique
+  Favourite        Favourite[]
+  Review           Review[]
+  deleted          Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model Scheduler {
+  id            Int             @id @default(autoincrement())
+  Seller        Seller          @relation(fields: [sellerId], references: [id])
+  sellerId      Int             @unique
+  Services      Services[]
+  SchedulerDate SchedulerDate[]
+  Category      Category?       @relation(fields: [categoryId], references: [id])
+  categoryId    Int?
+
+  deleted   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SchedulerDate {
+  id          Int        @id @default(autoincrement())
+  date        DateTime
+  Time        Time[]
+  Scheduler   Scheduler? @relation(fields: [schedulerId], references: [id])
+  schedulerId Int?
+  deleted     Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Discount {
+  id         Int      @id @default(autoincrement())
+  percentage String
+  startDate  DateTime
+  endDate    DateTime
+  startTime  DateTime
+  endTime    DateTime
+  Seller     Seller   @relation(fields: [sellerId], references: [id])
+  sellerId   Int      @unique
+  deleted    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Portfolio {
+  id        Int      @id @default(autoincrement())
+  Images    File[]
+  title     String
+  Seller    Seller   @relation(fields: [sellerId], references: [id])
+  sellerId  Int
+  deleted   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BankDetail {
+  id                  Int      @id @default(autoincrement())
+  stripeBankAccountId String
+  cancelationFee      String?
+  noShowFee           String?
+  Seller              Seller   @relation(fields: [sellerId], references: [id])
+  deleted             Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  sellerId            Int      @unique
+}
+
+model Post {
+  id           Int        @id @default(autoincrement())
+  location     String
+  description  String
+  notes        String
+  Time         Time[]
+  VenueType    Venue[]
+  LocationType Location[]
+  Images       File[]
+  hourlyRate   String
+  Seller       Seller?    @relation(fields: [sellerId], references: [id])
+  sellerId     Int?
+  Review       Review[]
+  deleted      Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Time {
+  id              Int            @id @default(autoincrement())
+  startTime       DateTime
+  endTime         DateTime
+  rate            Float          @default(0)
+  Post            Post?          @relation(fields: [postId], references: [id])
+  postId          Int?
+  SchedulerDate   SchedulerDate? @relation(fields: [schedulerDateId], references: [id])
+  schedulerDateId Int?
+  deleted         Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Venue {
+  id        Int      @id @default(autoincrement())
+  name      String
+  Post      Post?    @relation(fields: [postId], references: [id])
+  postId    Int?
+  deleted   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Location {
+  id        Int      @id @default(autoincrement())
+  name      String
+  Post      Post?    @relation(fields: [postId], references: [id])
+  postId    Int?
+  deleted   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Booking {
+  id                    Int            @id @default(autoincrement())
+  description           String
+  notes                 String?
+  ExampleImages         File[]         @relation(name: "exampleImage")
+  DeliverImages         File[]         @relation(name: "deliverBookingImage")
+  message               String?
+  date                  DateTime
+  deliveryDate          DateTime?
+  startTime             DateTime
+  endTime               DateTime
+  stripePaymentIntentId String?
+  totalPrice            String
+  clientName            String?
+  location              String
+  isExternal            Boolean        @default(false)
+  consumerEmail         String?
+  status                BookingStatus
+  reminderTime          DateTime?
+  bookingReferenceId    String         @unique
+  Seller                Seller         @relation(fields: [sellerId], references: [id])
+  sellerId              Int
+  Consumer              Consumer?      @relation(fields: [consumerId], references: [id])
+  consumerId            Int?
+  Review                Review?        @relation(fields: [reviewId], references: [id])
+  reviewId              Int?           @unique
+  Notification          Notification[]
+  deleted               Boolean        @default(false)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+}
+
+model Favourite {
+  id         Int      @id @default(autoincrement())
+  isSaved    Boolean  @default(false)
+  Seller     Seller   @relation(fields: [sellerId], references: [id])
+  sellerId   Int
+  Consumer   Consumer @relation(fields: [consumerId], references: [id])
+  consumerId Int
+  deleted    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Review {
+  id          Int       @id @default(autoincrement())
+  rating      Int
+  description String
+  Post        Post?     @relation(fields: [postId], references: [id])
+  postId      Int?
+  Seller      Seller?   @relation(fields: [sellerId], references: [id])
+  sellerId    Int?
+  deleted     Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  Booking     Booking?
+  Consumer    Consumer? @relation(fields: [consumerId], references: [id])
+  consumerId  Int?
+}
+
+model Chat {
+  id           Int            @id @default(autoincrement())
+  Users        User[]
+  Message      Message[]
+  Notification Notification[]
+  deleted      Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  content   String?
+  From      User     @relation(name: "messages", fields: [userId], references: [id])
+  userId    Int
+  Chat      Chat     @relation(fields: [chatId], references: [id])
+  chatId    Int
+  File      File[]
+  SeenBy    User[]   @relation("UserMessage")
+  deleted   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CardDetail {
+  id              Int       @id @default(autoincrement())
+  paymentMethodId String
+  isPrimary       Boolean   @default(false)
+  Consumer        Consumer? @relation(fields: [consumerId], references: [id])
+  consumerId      Int?
+  deleted         Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Call {
+  id          Int        @id @default(autoincrement())
+  status      CallStatus
+  type        CallType
+  startTime   DateTime   @default(now())
+  endTime     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  Caller      User       @relation(name: "Caller", fields: [callerId], references: [id])
+  callerId    Int
+  Recipient   User       @relation(name: "Recipient", fields: [recipientId], references: [id])
+  recipientId Int
+}
