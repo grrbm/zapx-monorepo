@@ -243,19 +243,21 @@ class _CreatingPostState extends State<CreatingPost> {
         errorMessage = 'Server error occurred';
       }
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
     } catch (e) {
       stopProgress();
       print('General error: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e'))
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      stopProgress();
     }
   }
 
