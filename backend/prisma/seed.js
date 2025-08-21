@@ -1,6 +1,7 @@
 import db from '../src/db.js';
 import { hashingPassword } from '../src/services/auth.service.js';
-/* Create First Admin User */
+
+/* Create Different User Types */
 const createFirstAdmin = async () => {
   const email = process.env.ADMIN_EMAIL || 'admin@example.com';
   const password = process.env.ADMIN_PASSWORD || 'admin123';
@@ -27,6 +28,192 @@ const createFirstAdmin = async () => {
     },
   });
   return admin;
+};
+
+/* Create Consumer Users */
+const createConsumers = async () => {
+  const consumers = [
+    {
+      username: 'sarah_jones',
+      fullName: 'Sarah Jones',
+      email: 'sarah.jones@example.com',
+      password: 'consumer123',
+      phone: '+1-555-0101',
+    },
+    {
+      username: 'mike_chen',
+      fullName: 'Mike Chen',
+      email: 'mike.chen@example.com',
+      password: 'consumer123',
+      phone: '+1-555-0102',
+    },
+    {
+      username: 'emily_davis',
+      fullName: 'Emily Davis',
+      email: 'emily.davis@example.com',
+      password: 'consumer123',
+      phone: '+1-555-0103',
+    }
+  ];
+
+  for (const consumerData of consumers) {
+    const existingUser = await db.user.findFirst({
+      where: { email: consumerData.email, deleted: false }
+    });
+
+    if (!existingUser) {
+      const hashedPassword = await hashingPassword({ password: consumerData.password });
+      
+      const user = await db.user.create({
+        data: {
+          username: consumerData.username,
+          fullName: consumerData.fullName,
+          email: consumerData.email,
+          password: hashedPassword,
+          role: 'CONSUMER',
+          isVerified: true,
+        },
+      });
+
+      await db.consumer.create({
+        data: {
+          phone: consumerData.phone,
+          userId: user.id,
+        },
+      });
+
+      console.log(`Consumer '${consumerData.fullName}' created successfully`);
+    } else {
+      console.log(`Consumer '${consumerData.fullName}' already exists`);
+    }
+  }
+};
+
+/* Create Seller Users */
+const createSellers = async () => {
+  const sellers = [
+    {
+      username: 'alex_photo',
+      fullName: 'Alex Rodriguez',
+      email: 'alex.photo@example.com',
+      password: 'seller123',
+      aboutMe: 'Professional photographer specializing in weddings and portraits with 8+ years experience.',
+      location: 'New York, NY',
+      categoryName: 'Photography',
+    },
+    {
+      username: 'jessica_video',
+      fullName: 'Jessica Williams',
+      email: 'jessica.video@example.com',
+      password: 'seller123',
+      aboutMe: 'Creative videographer focused on event recaps and social media content.',
+      location: 'Los Angeles, CA',
+      categoryName: 'Videography',
+    },
+    {
+      username: 'david_studio',
+      fullName: 'David Thompson',
+      email: 'david.studio@example.com',
+      password: 'seller123',
+      aboutMe: 'Studio photographer specializing in headshots and product photography.',
+      location: 'Chicago, IL',
+      categoryName: 'Photography',
+    },
+    {
+      username: 'maria_films',
+      fullName: 'Maria Garcia',
+      email: 'maria.films@example.com',
+      password: 'seller123',
+      aboutMe: 'Cinematic videographer creating beautiful wedding films and brand videos.',
+      location: 'Miami, FL',
+      categoryName: 'Videography',
+    }
+  ];
+
+  for (const sellerData of sellers) {
+    const existingUser = await db.user.findFirst({
+      where: { email: sellerData.email, deleted: false }
+    });
+
+    if (!existingUser) {
+      const hashedPassword = await hashingPassword({ password: sellerData.password });
+      
+      const user = await db.user.create({
+        data: {
+          username: sellerData.username,
+          fullName: sellerData.fullName,
+          email: sellerData.email,
+          password: hashedPassword,
+          role: 'SELLER',
+          isVerified: true,
+        },
+      });
+
+      const category = await db.category.findFirst({
+        where: { name: sellerData.categoryName, deleted: false }
+      });
+
+      if (category) {
+        await db.seller.create({
+          data: {
+            aboutMe: sellerData.aboutMe,
+            location: sellerData.location,
+            userId: user.id,
+            categoryId: category.id,
+          },
+        });
+
+        console.log(`Seller '${sellerData.fullName}' created successfully`);
+      } else {
+        console.log(`Category '${sellerData.categoryName}' not found for seller '${sellerData.fullName}'`);
+      }
+    } else {
+      console.log(`Seller '${sellerData.fullName}' already exists`);
+    }
+  }
+};
+
+/* Create Additional Admin Users */
+const createAdmins = async () => {
+  const admins = [
+    {
+      username: 'super_admin',
+      fullName: 'Super Administrator',
+      email: 'superadmin@zapx.com',
+      password: 'superadmin123',
+    },
+    {
+      username: 'platform_admin',
+      fullName: 'Platform Manager',
+      email: 'platform@zapx.com',
+      password: 'platform123',
+    }
+  ];
+
+  for (const adminData of admins) {
+    const existingUser = await db.user.findFirst({
+      where: { email: adminData.email, deleted: false }
+    });
+
+    if (!existingUser) {
+      const hashedPassword = await hashingPassword({ password: adminData.password });
+      
+      await db.user.create({
+        data: {
+          username: adminData.username,
+          fullName: adminData.fullName,
+          email: adminData.email,
+          password: hashedPassword,
+          role: 'ADMIN',
+          isVerified: true,
+        },
+      });
+
+      console.log(`Admin '${adminData.fullName}' created successfully`);
+    } else {
+      console.log(`Admin '${adminData.fullName}' already exists`);
+    }
+  }
 };
 
 const services = [
@@ -235,13 +422,28 @@ const deleteOldServices = async () => {
   }
 };
 async function main() {
-  await createFirstAdmin();
+  // Create base data first
   await createCategory();
   await createVenues();
   await createLocations();
   await createServices();
   await deleteOldServices();
-  console.log('seed!');
+  
+  // Create users of different types
+  await createFirstAdmin();
+  await createAdmins();
+  await createConsumers();
+  await createSellers();
+  
+  console.log('✅ Database seeded with all user types!');
+  console.log('\n📊 Created Users:');
+  console.log('👑 ADMIN Users: admin@example.com, superadmin@zapx.com, platform@zapx.com');
+  console.log('🛒 CONSUMER Users: sarah.jones@example.com, mike.chen@example.com, emily.davis@example.com');
+  console.log('📸 SELLER Users: alex.photo@example.com, jessica.video@example.com, david.studio@example.com, maria.films@example.com');
+  console.log('\n🔑 Default passwords:');
+  console.log('- Admin: admin123 / superadmin123 / platform123');
+  console.log('- Consumer: consumer123');
+  console.log('- Seller: seller123');
 }
 
 main()

@@ -58,11 +58,34 @@ class HomeHttpApiRepository implements HomeRepository {
   }
 
   Future<UserConsumer> fetchConsumerData(Map<String, String>? headers) async {
-    dynamic response = await _apiServices.getGetApiResponseWithHeader(
-      AppUrl.consumerProfileEndPoint,
-      headers: headers,
-    );
-    return response = UserConsumer.fromJson(response['User']);
+    try {
+      print('🔍 Fetching consumer data from: ${AppUrl.consumerProfileEndPoint}');
+      print('🔍 Headers: $headers');
+      
+      dynamic response = await _apiServices.getGetApiResponseWithHeader(
+        AppUrl.consumerProfileEndPoint,
+        headers: headers,
+      );
+      
+      print('📄 Raw consumer response: $response');
+      
+      if (response == null) {
+        print('⚠️ Warning: API returned null response for consumer data');
+        throw Exception('No response from server');
+      }
+      
+      if (!response.containsKey('User')) {
+        print('⚠️ Warning: API response missing "User" field');
+        print('⚠️ Available fields: ${response.keys.toList()}');
+        throw Exception('Invalid response structure - missing User field');
+      }
+      
+      print('✅ Successfully parsed consumer response');
+      return UserConsumer.fromJson(response['User']);
+    } catch (e) {
+      print('❌ Error in fetchConsumerData: $e');
+      rethrow;
+    }
   }
 
   Future<ChatModel> fetchChatList(Map<String, String>? headers) async {

@@ -210,6 +210,12 @@ class NetworkApiService implements BaseApiServices {
         return responseJson;
       case 400:
         throw BadRequestException(response.body.toString());
+      case 401:
+      case 403:
+        {
+          print('🚫 Authorization error (${response.statusCode}): ${response.body}');
+          throw UnauthorisedException('Access denied: ${response.body}');
+        }
       case 500:
       case 404:
         {
@@ -219,7 +225,7 @@ class NetworkApiService implements BaseApiServices {
 
       default:
         throw FetchDataException(
-          'Error occured while communicating with server',
+          'Error occured while communicating with server (${response.statusCode})',
         );
     }
   }
