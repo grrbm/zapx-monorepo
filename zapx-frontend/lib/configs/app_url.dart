@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
+
 class AppUrl {
-  static var baseUrl = 'https://saboia.xyz';
+  static var baseUrl = kDebugMode ? 'http://localhost:5003' : 'https://saboia.xyz';
   static var moviesBaseUrl =
       'https://dea91516-1da3-444b-ad94-c6d0c4dfab81.mock.pstmn.io/';
 

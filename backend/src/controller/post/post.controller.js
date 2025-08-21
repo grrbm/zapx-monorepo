@@ -106,13 +106,39 @@ const createPost = async (req, res) => {
       };
     });
 
-    // Validate Seller existence
-    const existSeller = await db.seller.findFirst({
-      where: { deleted: false, User: { id: userId, deleted: false } },
+    // Validate Seller existence or get user role
+    const user = await db.user.findFirst({
+      where: { id: userId, deleted: false },
+      include: { Seller: true }
     });
 
+    if (!user) {
+      return res.status(400).json({ message: 'User not found!' });
+    }
+
+    let existSeller = user.Seller;
+
+    // If user is ADMIN but doesn't have a Seller profile, create one
+    if (!existSeller && user.role === 'ADMIN') {
+      // Get a default category (Photography)
+      const defaultCategory = await db.category.findFirst({
+        where: { name: 'Photography', deleted: false }
+      });
+
+      if (defaultCategory) {
+        existSeller = await db.seller.create({
+          data: {
+            userId: userId,
+            categoryId: defaultCategory.id,
+            aboutMe: 'Admin user',
+            location: 'Admin location'
+          }
+        });
+      }
+    }
+
     if (!existSeller) {
-      return res.status(400).json({ message: 'Seller not found!' });
+      return res.status(400).json({ message: 'Seller profile not found. Please contact support.' });
     }
 
     // Create post in database
@@ -160,8 +186,12 @@ const createPost = async (req, res) => {
 
     return res.status(200).json({ message: 'Post created successfully!' });
   } catch (err) {
-    console.log('err', err);
-    res.status(500).json({ message: err.message });
+    console.error('Post creation error:', err);
+    console.error('Stack trace:', err.stack);
+    res.status(500).json({ 
+      message: err.message || 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 };
 

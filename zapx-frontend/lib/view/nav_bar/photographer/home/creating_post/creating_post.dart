@@ -91,14 +91,62 @@ class _CreatingPostState extends State<CreatingPost> {
     );
   }
 
+  void stopProgress() {
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   Future<void> _uploadPost() async {
     try {
+      // Validate required fields before sending
+      if (locationAddressCtrl.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location is required')),
+        );
+        return;
+      }
+      
+      if (descriptionCtrl.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Description is required')),
+        );
+        return;
+      }
+      
+      if (hourlyRateCtrl.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Hourly rate is required')),
+        );
+        return;
+      }
+      
+      if (_selectedImages.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('At least one image is required')),
+        );
+        return;
+      }
+      
+      if (timeRanges.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('At least one time slot is required')),
+        );
+        return;
+      }
+
       final dio = Dio(BaseOptions(baseUrl: AppUrl.baseUrl));
-      final token =
-          SessionController()
-              .authModel
-              .response
-              .token; // Replace with the actual token
+      final token = SessionController().authModel.response.token;
+      
+      if (token.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Authentication token missing. Please login again.')),
+        );
+        return;
+      }
+      
       setState(() {
         _isLoading = true;
       });
@@ -111,6 +159,16 @@ class _CreatingPostState extends State<CreatingPost> {
           getX.Get.find<PostController>().selectedLocations
               .map((location) => {"id": location.id})
               .toList();
+      
+      // Validate that at least one venue or location type is selected
+      if (selectedVenuesJson.isEmpty && selectedLocationJson.isEmpty) {
+        stopProgress();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select at least one venue type or location type')),
+        );
+        return;
+      }
+      
       final formData = FormData();
 
       // Add images to FormData
@@ -177,8 +235,16 @@ class _CreatingPostState extends State<CreatingPost> {
     } on DioException catch (e) {
       stopProgress();
       print('Upload error: ${e.response?.data}');
+      
+      String errorMessage = 'Upload failed';
+      if (e.response?.data is Map<String, dynamic>) {
+        errorMessage = e.response?.data['message'] ?? 'Upload failed';
+      } else if (e.response?.data is String) {
+        errorMessage = 'Server error occurred';
+      }
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.response?.data['message'] ?? 'Upload failed')),
+        SnackBar(content: Text(errorMessage)),
       );
     } catch (e) {
       stopProgress();
